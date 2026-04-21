@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+.venv/
+venv/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+.next/
+.nuxt/
+out/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# macOS
+.DS_Store
+
+# Data / model weights
+data/raw/
+*.pt
+*.bin
+*.pkl
+*.onnx
+
+# GCP credentials (never commit)
+serviceAccountKey.json
+*-serviceaccount.json
+gcp-key.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Misc
+.coverage
+htmlcov/
