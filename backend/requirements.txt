@@ -11,11 +11,13 @@ Pillow
 sentence-transformers
 resend
 jinja2
-weasyprint
+fpdf2
 python-dotenv
 httpx
 playwright
-google-generativeai
+google-genai
 google-cloud-vision
 google-cloud-aiplatform
+google-auth
+google-auth-oauthlib
 pydantic-settings
