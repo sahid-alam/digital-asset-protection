@@ -51,3 +51,6 @@ logs/
 # Misc
 .coverage
 htmlcov/
+
+# Claude Code local session/memory files
+.claude/

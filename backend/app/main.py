@@ -11,7 +11,8 @@ from app.routers import assets, analytics, infringements, scan
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # load CLIP models here
+    from app.services.fingerprint import load_models
+    load_models()
     yield
 
 

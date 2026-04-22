@@ -21,7 +21,7 @@ https://github.com/sahid-alam/digital-asset-protection
 | Layer | Tech | Notes |
 |-------|------|-------|
 | Backend | FastAPI (Python), async | |
-| Backend deploy | Cloud Run (GCP) | Containerized via Dockerfile. Port 8080. |
+| Backend deploy | Railway | Free tier, zero config, Docker-based |
 | Database | Supabase — PostgreSQL + pgvector | |
 | Asset storage | Supabase Storage | Same client, zero extra setup |
 | Image fingerprinting | CLIP ViT-B/32 + imagehash | Local model, loaded at startup |
@@ -36,10 +36,10 @@ https://github.com/sahid-alam/digital-asset-protection
 | Frontend deploy | Vercel | Zero config, connect repo and deploy |
 
 ### Google services (say these to judges)
-Cloud Run · Vertex AI Embeddings · Gemini 1.5 Flash · Google Vision API · Google Custom Search API
+Vertex AI Embeddings · Gemini 1.5 Flash · Google Vision API · Google Custom Search API
 
 ### Submission compliance
-- Cloud deployment: Cloud Run ✅
+- Cloud deployment: Railway ✅
 - At least one Google AI model/service: Gemini 1.5 Flash ✅
 
 ---
@@ -52,6 +52,51 @@ crawler/          <- M3 (human, data/QA only)
 notifications/    <- M4 (human, docs/demo only)
 ```
 Agents must never write to frontend/, crawler/, or notifications/.
+
+---
+
+## IMPORTANT: GCP credentials on Railway
+Railway has no filesystem — you cannot use a file path for GOOGLE_APPLICATION_CREDENTIALS.
+Instead, set the entire JSON content as an env var:
+
+  GOOGLE_CREDENTIALS_JSON={"type":"service_account","project_id":"...","private_key":"..."}
+
+Then load it in code (in core/config.py or fingerprint.py):
+
+  import json, os
+  from google.oauth2 import service_account
+
+  creds_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
+  if creds_json:
+      creds_info = json.loads(creds_json)
+      credentials = service_account.Credentials.from_service_account_info(
+          creds_info,
+          scopes=["https://www.googleapis.com/auth/cloud-platform"]
+      )
+
+Never use GOOGLE_APPLICATION_CREDENTIALS file path approach in production code.
+
+---
+
+## Railway deployment
+```bash
+# Install Railway CLI
+npm install -g @railway/cli
+
+# Login
+railway login
+
+# From backend folder
+cd backend
+railway init       # first time only
+railway up         # deploy
+
+# Set env vars in Railway dashboard or CLI:
+railway variables set KEY=value
+```
+
+Dockerfile CMD must use $PORT not hardcoded 8080:
+  CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
 
 ---
 
@@ -86,16 +131,6 @@ Never called directly from a router.
 
 ---
 
-## GCP setup (Day 1 — do this first)
-1. Create GCP project
-2. Enable APIs: Cloud Run, Vertex AI, Cloud Vision, Gemini API
-3. Create service account, download JSON key
-4. Set GOOGLE_APPLICATION_CREDENTIALS to path of JSON key
-5. Note: Vertex AI and Vision API have 5-10 min activation delays — enable before coding
-No Firebase project needed.
-
----
-
 ## Guardrails
 - No direct pushes to main — all changes via PR on own branch
 - No hardcoded secrets — all through .env and config.py
@@ -105,6 +140,7 @@ No Firebase project needed.
 - Every new module -> one-line module docstring
 - Frontend never touches Supabase directly — all data through the API
 - Never commit service account JSON or any GCP credentials file
+- Never commit .env
 
 ---
 
