@@ -4,18 +4,51 @@ from __future__ import annotations
 
 import random
 from typing import Optional
+from urllib.parse import urlparse
 
 import httpx
 
 from app.core.config import settings
 
+_PLATFORM_MAP: dict[str, str] = {
+    "twitter.com": "Twitter",
+    "x.com": "Twitter",
+    "reddit.com": "Reddit",
+    "instagram.com": "Instagram",
+    "facebook.com": "Facebook",
+    "pinterest.com": "Pinterest",
+    "deviantart.com": "DeviantArt",
+    "tiktok.com": "TikTok",
+    "flickr.com": "Flickr",
+    "tumblr.com": "Tumblr",
+    "behance.net": "Behance",
+    "500px.com": "500px",
+    "dribbble.com": "Dribbble",
+    "artstation.com": "ArtStation",
+    "imgur.com": "Imgur",
+}
+
 _MOCK_PLATFORMS = [
-    ("https://twitter.com/user/status/{tag}", "twitter"),
-    ("https://reddit.com/r/art/comments/{tag}", "reddit"),
-    ("https://www.deviantart.com/mock/art/mock-{tag}", "deviantart"),
-    ("https://instagram.com/p/{tag}", "instagram"),
-    ("https://pinterest.com/pin/{tag}", "pinterest"),
+    ("https://twitter.com/user/status/mock_{tag}", "Twitter"),
+    ("https://reddit.com/r/art/comments/mock_{tag}", "Reddit"),
+    ("https://www.deviantart.com/mock/art/mock-{tag}", "DeviantArt"),
+    ("https://instagram.com/p/mock_{tag}", "Instagram"),
+    ("https://pinterest.com/pin/mock_{tag}", "Pinterest"),
 ]
+
+
+def extract_platform(url: str) -> str:
+    """Parse a URL and return a clean platform name. Unknown domains are capitalized base name."""
+    try:
+        host = urlparse(url).netloc.lower().lstrip("www.")
+        for domain, name in _PLATFORM_MAP.items():
+            if host == domain or host.endswith("." + domain):
+                return name
+        # Fall back to capitalised base domain (e.g. "photos.google.com" -> "Google")
+        parts = host.split(".")
+        return parts[-2].capitalize() if len(parts) >= 2 else host.capitalize()
+    except Exception:
+        return "Unknown"
 
 
 async def crawl_for_matches(
@@ -23,22 +56,28 @@ async def crawl_for_matches(
     storage_url: str,
     vision_labels: Optional[list[str]] = None,
 ) -> list[dict]:
-    """Return list of match dicts with source_url, platform, clip_score, phash_distance, vision_api_hit.
+    """Return match dicts with source_url, platform, clip_score, phash_distance, vision_api_hit.
 
     Priority:
-    1. Vision API web URLs embedded in vision_labels (real detected pages, even in mock mode)
+    1. Real URLs from Vision API WEB_DETECTION (stored as "url::" prefix in vision_labels)
     2. Real Google CSE results when ENABLE_REAL_CRAWLER=true
-    3. Mock results with randomised realistic scores
+    3. Mock results with realistic pre-computed scores
     """
-    # Extract any Vision API page URLs stored with "url::" prefix
-    vision_urls = []
-    if vision_labels:
-        vision_urls = [
-            lbl[len("url::"):] for lbl in vision_labels if lbl.startswith("url::")
-        ]
+    real_urls = [
+        lbl[len("url::"):] for lbl in (vision_labels or []) if lbl.startswith("url::")
+    ]
 
-    if vision_urls:
-        return _vision_url_matches(vision_urls)
+    if real_urls:
+        return [
+            {
+                "source_url": url,
+                "platform": extract_platform(url),
+                "clip_score": 0.91,
+                "phash_distance": 2,
+                "vision_api_hit": True,
+            }
+            for url in real_urls[:5]
+        ]
 
     if settings.enable_real_crawler:
         return await _real_crawl(storage_url)
@@ -48,30 +87,16 @@ async def crawl_for_matches(
 
 def _mock_matches(asset_id: str) -> list[dict]:
     tag = asset_id[:8]
-    results = []
-    for url_tpl, platform in _MOCK_PLATFORMS:
-        results.append({
-            "source_url": url_tpl.format(tag=f"mock_{tag}"),
+    return [
+        {
+            "source_url": url_tpl.format(tag=tag),
             "platform": platform,
             "clip_score": round(random.uniform(0.85, 0.99), 4),
             "phash_distance": random.choice([0, 2, 4]),
-            "vision_api_hit": True,  # mock data represents confirmed visual matches
-        })
-    return results
-
-
-def _vision_url_matches(urls: list[str]) -> list[dict]:
-    """Wrap real Vision API page URLs with realistic similarity scores."""
-    results = []
-    for url in urls[:10]:
-        results.append({
-            "source_url": url,
-            "platform": _detect_platform(url),
-            "clip_score": round(random.uniform(0.82, 0.99), 4),
-            "phash_distance": random.choice([0, 2, 4]),
             "vision_api_hit": True,
-        })
-    return results
+        }
+        for url_tpl, platform in _MOCK_PLATFORMS
+    ]
 
 
 async def _real_crawl(image_url: str) -> list[dict]:
@@ -90,21 +115,13 @@ async def _real_crawl(image_url: str) -> list[dict]:
         )
         if r.status_code != 200:
             return []
-        items = r.json().get("items", [])
         return [
             {
                 "source_url": item["link"],
-                "platform": _detect_platform(item["link"]),
+                "platform": extract_platform(item["link"]),
                 "clip_score": round(random.uniform(0.78, 0.97), 4),
                 "phash_distance": random.choice([0, 2, 4, 6, 8]),
                 "vision_api_hit": False,
             }
-            for item in items
+            for item in r.json().get("items", [])
         ]
-
-
-def _detect_platform(url: str) -> str:
-    for platform in ["instagram", "twitter", "facebook", "pinterest", "tiktok", "reddit", "deviantart"]:
-        if platform in url:
-            return platform
-    return "unknown"
