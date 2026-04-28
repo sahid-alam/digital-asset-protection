@@ -44,7 +44,7 @@ async def generate_image_fingerprint(file_bytes: bytes, asset_id: str) -> Finger
         features = _model.encode_image(tensor)  # type: ignore[union-attr]
         features = features / features.norm(dim=-1, keepdim=True)
     clip_embedding: list[float] = features[0].tolist()
-    phash = str(imagehash.phash(img))
+    phash = str(imagehash.dhash(img))
 
     vision_result = _call_vision_api(file_bytes)
     labels = vision_result["labels"]
