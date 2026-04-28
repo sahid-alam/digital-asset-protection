@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gc
 import io
 from typing import Optional
 
@@ -28,7 +29,12 @@ def load_models() -> None:
         "ViT-B-32", pretrained="openai"
     )
     model.eval()
-    _model = model
+    # Keep only the visual encoder — text encoder (~250MB) is never used here.
+    # This frees enough RAM to stay within Railway's 512MB limit.
+    _model = model.visual
+    del model.transformer, model.token_embedding, model.positional_embedding
+    del model.ln_final, model.text_projection, model
+    gc.collect()
     _preprocess = preprocess
     print("CLIP model loaded.", flush=True)
 
@@ -41,7 +47,7 @@ async def generate_image_fingerprint(file_bytes: bytes, asset_id: str) -> Finger
 
     tensor = _preprocess(img).unsqueeze(0)  # type: ignore[operator]
     with torch.no_grad():
-        features = _model.encode_image(tensor)  # type: ignore[union-attr]
+        features = _model(tensor)  # type: ignore[operator] — _model is the visual encoder
         features = features / features.norm(dim=-1, keepdim=True)
     clip_embedding: list[float] = features[0].tolist()
     phash = str(imagehash.dhash(img))
