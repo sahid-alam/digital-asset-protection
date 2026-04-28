@@ -151,6 +151,8 @@ def list_infringement_records(
     asset_id: Optional[str] = None,
     status: Optional[str] = None,
     limit: int = 50,
+    platform: Optional[str] = None,
+    min_confidence: Optional[float] = None,
 ) -> list[dict]:
     """List infringements with optional filters, ordered by detected_at desc."""
     q = get_supabase().table("infringements").select("*")
@@ -158,6 +160,10 @@ def list_infringement_records(
         q = q.eq("asset_id", asset_id)
     if status:
         q = q.eq("status", status)
+    if platform:
+        q = q.eq("platform", platform)
+    if min_confidence is not None:
+        q = q.gte("confidence_score", min_confidence)
     return q.order("detected_at", desc=True).limit(limit).execute().data
 
 

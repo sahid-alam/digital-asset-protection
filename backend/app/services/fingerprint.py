@@ -21,12 +21,16 @@ _preprocess: Optional[object] = None
 def load_models() -> None:
     """Load CLIP ViT-B/32 into module globals. Called once at startup."""
     global _model, _preprocess
+    if _model is not None:
+        return
+    print("Loading CLIP model... this takes ~30s on first boot", flush=True)
     model, _, preprocess = open_clip.create_model_and_transforms(
         "ViT-B-32", pretrained="openai"
     )
     model.eval()
     _model = model
     _preprocess = preprocess
+    print("CLIP model loaded.", flush=True)
 
 
 async def generate_image_fingerprint(file_bytes: bytes, asset_id: str) -> FingerprintResult:
@@ -40,14 +44,18 @@ async def generate_image_fingerprint(file_bytes: bytes, asset_id: str) -> Finger
     clip_embedding: list[float] = features[0].tolist()
 
     phash = str(imagehash.phash(img))
-    vision_labels = _call_vision_api(file_bytes)
+    vision_result = _call_vision_api(file_bytes)
+    labels = vision_result["labels"]
+    web_urls = vision_result["web_urls"]
+    # Store labels + web page URLs together; URLs prefixed "url::" for crawler to consume
+    all_labels = labels + [f"url::{u}" for u in web_urls]
 
     return FingerprintResult(
         asset_id=asset_id,
         clip_embedding=clip_embedding,
         phash=phash,
         vertex_embedding=None,
-        vision_api_labels=vision_labels if vision_labels else None,
+        vision_api_labels=all_labels if all_labels else None,
     )
 
 
@@ -69,21 +77,30 @@ async def generate_document_fingerprint(
     )
 
 
-def _call_vision_api(image_bytes: bytes) -> list[str]:
-    """Call Vision API WEB_DETECTION using credentials from GOOGLE_CREDENTIALS_JSON."""
+def _call_vision_api(image_bytes: bytes) -> dict:
+    """Call Vision API WEB_DETECTION. Returns {"labels": [...], "web_urls": [...]}."""
     try:
         from google.cloud import vision  # type: ignore[import]
+        import logging
         creds = get_gcp_credentials()
         client = vision.ImageAnnotatorClient(credentials=creds) if creds else vision.ImageAnnotatorClient()
         image = vision.Image(content=image_bytes)
         response = client.web_detection(image=image)
-        return [
+        labels = [
             entity.description
             for entity in response.web_detection.web_entities
             if entity.score > 0.5
         ]
-    except Exception:
-        return []
+        web_urls = [
+            page.url
+            for page in response.web_detection.pages_with_matching_images
+            if page.url
+        ]
+        return {"labels": labels, "web_urls": web_urls}
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("Vision API unavailable: %s", exc)
+        return {"labels": [], "web_urls": []}
 
 
 async def _get_vertex_embedding(text: str) -> list[float]:

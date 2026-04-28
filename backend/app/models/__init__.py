@@ -64,4 +64,8 @@ class AnalyticsSummary(BaseModel):
     pending_count: int
     valid_count: int
     false_positive_count: int
+    dmca_sent_count: int
+    avg_confidence_score: float
+    high_confidence_count: int
+    last_scan_at: Optional[datetime] = None
     platform_breakdown: dict[str, int]

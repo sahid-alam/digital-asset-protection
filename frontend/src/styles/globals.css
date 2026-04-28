@@ -1,0 +1,268 @@
+/* Manual reset — Tailwind removed (unused utilities were adding dead weight) */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+img, video, svg { display: block; max-width: 100%; }
+
+/* ─── Design Tokens ─────────────────────────────────────────────────────── */
+:root {
+  /* Background layers */
+  --bg:           #08090a;
+  --panel:        #0d0f11;
+  --elevated:     #13161a;
+  --elevated-2:   #181c22;
+
+  /* Borders */
+  --hairline:        #1d2127;
+  --hairline-strong: #262b33;
+
+  /* Ink (text) scale */
+  --ink:   #e6e8eb;
+  --ink-2: #b4b9c0;
+  --ink-3: #8a9099;
+  --ink-4: #5a6169;
+  --ink-5: #3e444c;
+
+  /* Semantic colours */
+  --accent:     #00d4ff;
+  --accent-dim: #0088a8;
+  --accent-glow: rgba(0, 212, 255, 0.12);
+  --danger:     #ff4d5e;
+  --warn:       #f6b24a;
+  --ok:         #34d399;
+  --info:       #6ea8ff;
+  --orange:     #f97316;   /* high-confidence band in Analytics */
+
+  /* Semantic glow tokens — replaces scattered rgba() values */
+  --danger-glow:  rgba(255, 77, 94, 0.12);
+  --warn-glow:    rgba(246, 178, 74, 0.10);
+  --ok-glow:      rgba(52, 211, 153, 0.12);
+  --info-glow:    rgba(110, 168, 255, 0.12);
+  --orange-glow:  rgba(249, 115, 22, 0.12);
+
+  /* Overlay tints — replaces scattered rgba(0,0,0,x) values */
+  --overlay-light: rgba(0, 0, 0, 0.50);
+  --overlay-mid:   rgba(0, 0, 0, 0.55);
+  --overlay-heavy: rgba(0, 0, 0, 0.70);
+
+  /* Typography */
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "Inter", system-ui, sans-serif;
+
+  /* Type scale */
+  --text-2xs:  9px;
+  --text-xs:   10px;
+  --text-sm:   11px;
+  --text-base: 12px;
+  --text-md:   13px;
+  --text-lg:   14px;
+  --text-xl:   24px;
+  --text-2xl:  28px;
+  --text-3xl:  34px;
+
+  /* Border radius */
+  --radius-sm:   3px;
+  --radius-md:   4px;
+  --radius-lg:   8px;
+  --radius-full: 9999px;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Transitions */
+  --transition-fast: 0.08s ease;
+  --transition-base: 0.15s ease;
+  --transition-slow: 0.30s ease;
+
+  /* Z-index scale */
+  --z-dropdown: 40;
+  --z-drawer:   50;
+  --z-modal:    60;
+  --z-palette:  100;
+
+  /* Layout */
+  --sidebar-w: 220px;
+  --topbar-h:  44px;
+  --statusbar-h: 22px;
+}
+
+/* ─── Base ──────────────────────────────────────────────────────────────── */
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+input, select, button, textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ─── Focus ─────────────────────────────────────────────────────────────── */
+/* Visible keyboard focus ring using accent colour */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Suppress default outline when not keyboard-navigating */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--panel); }
+::-webkit-scrollbar-thumb { background: var(--hairline-strong); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #36404a; }
+
+/* ─── Utility classes ────────────────────────────────────────────────────── */
+.mono  { font-family: var(--font-mono); }
+.upper { text-transform: uppercase; letter-spacing: 0.08em; }
+.tnum  { font-variant-numeric: tabular-nums; }
+
+/* ─── Interactive utilities (replaces onMouseEnter/Leave JS patterns) ─── */
+
+/* Generic ghost button */
+.btn-ghost {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-3);
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+.btn-ghost:hover { color: var(--ink); background: var(--elevated); }
+
+/* Panel toolbar button (Resync, Export CSV, etc.) */
+.tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background: var(--elevated);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-sm);
+  color: var(--ink-3);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+.tool-btn:hover { border-color: var(--accent); color: var(--ink); }
+
+/* Danger variant */
+.tool-btn-danger { border-color: var(--danger); color: var(--danger); }
+.tool-btn-danger:hover { background: var(--danger-glow); }
+
+/* Accent variant */
+.tool-btn-accent { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+.tool-btn-accent:hover { background: rgba(0, 212, 255, 0.2); }
+
+/* Table / card row hover */
+.row-hover {
+  transition: background var(--transition-fast);
+}
+.row-hover:hover { background: var(--elevated) !important; }
+
+/* Sidebar nav item */
+.nav-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  border-left: 2px solid transparent;
+  cursor: pointer;
+  color: var(--ink-3);
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+.nav-item:hover { color: var(--ink); background: var(--elevated); }
+.nav-item.active {
+  background: var(--elevated);
+  border-left-color: var(--accent);
+  color: var(--ink);
+}
+
+/* ─── Slash background ──────────────────────────────────────────────────── */
+.slash-bg {
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent,
+    transparent 8px,
+    rgba(255, 255, 255, 0.018) 8px,
+    rgba(255, 255, 255, 0.018) 9px
+  );
+}
+
+/* ─── Animations ────────────────────────────────────────────────────────── */
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.blink { animation: blink 1s step-end infinite; }
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--elevated) 25%,
+    var(--elevated-2) 50%,
+    var(--elevated) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spin { animation: spin 0.5s linear infinite; }
+
+@keyframes page-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-fade { animation: page-fade-in var(--transition-base) both; }
+
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.count-up { animation: count-up 0.4s ease-out both; }

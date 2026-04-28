@@ -55,16 +55,18 @@ async def run_scan(asset_id: str, job_id: str) -> None:
             update_scan_job_record(job_id, "failed")
             return
 
-        candidates = await crawl_for_matches(asset_id, asset["storage_url"])
-        vision_hit = bool(fp_data.get("vision_api_labels"))
+        vision_labels = fp_data.get("vision_api_labels") or []
+        candidates = await crawl_for_matches(asset_id, asset["storage_url"], vision_labels)
         matches_count = 0
 
         for candidate in candidates:
-            clip_score = 0.8
-            confidence = compute_confidence_score(clip_score, None, vision_hit)
+            clip_score: float = candidate["clip_score"]
+            phash_distance = candidate.get("phash_distance")
+            vision_hit: bool = candidate.get("vision_api_hit", False)
+            confidence = compute_confidence_score(clip_score, phash_distance, vision_hit)
             inf = create_infringement_record(
                 asset_id, candidate["source_url"], candidate["platform"],
-                confidence, clip_score, None, vision_hit,
+                confidence, clip_score, phash_distance, vision_hit,
             )
             await send_infringement_alert(inf["id"])
             matches_count += 1
