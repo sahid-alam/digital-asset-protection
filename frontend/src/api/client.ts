@@ -1,8 +1,8 @@
 import axios from 'axios'
 
-const rawBase = import.meta.env.VITE_API_URL || ''
-// Upgrade http → https to prevent mixed-content blocking on Vercel
-const baseURL = rawBase.replace(/^http:\/\//, 'https://')
+const baseURL = import.meta.env.PROD
+  ? 'https://dapsbackend-production.up.railway.app'
+  : (import.meta.env.VITE_API_URL || '')
 
 const api = axios.create({
   baseURL,
