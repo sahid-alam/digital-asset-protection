@@ -44,6 +44,31 @@ const STATUS_LABELS: Record<UploadStatus, string> = {
 const PIPELINE_STEPS = ['UPLOAD', 'pHASH', 'SSIM', 'INDEX', 'CRAWL']
 
 const SETTINGS_KEY = 'sentry_upload_settings'
+const MAX_UPLOAD_PX = 1024  // resize longest side to this before upload
+
+async function compressImage(file: File): Promise<File> {
+  if (!file.type.startsWith('image/')) return file
+  return new Promise((resolve) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const { naturalWidth: w, naturalHeight: h } = img
+      const scale = Math.min(1, MAX_UPLOAD_PX / Math.max(w, h))
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(w * scale)
+      canvas.height = Math.round(h * scale)
+      canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
+      canvas.toBlob(
+        (blob) => resolve(blob ? new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }) : file),
+        'image/jpeg',
+        0.85,
+      )
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+    img.src = url
+  })
+}
 
 function formatBytes(n: number) {
   if (n < 1024) return `${n}B`
@@ -99,7 +124,8 @@ export default function Upload() {
     }, 300)
 
     try {
-      const asset = await uploadAsset(file, ownerEmail || undefined)
+      const compressed = await compressImage(file)
+      const asset = await uploadAsset(compressed, ownerEmail || undefined)
       clearInterval(tick)
       setPipelineStep(3)
       setQueue(q => q.map(item => item.id === id ? { ...item, status: 'fingerprinting', progress: 85, asset } : item))
