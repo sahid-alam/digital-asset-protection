@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     enable_real_crawler: bool = False
     enable_social_scan: bool = False
 
+    saucenao_api_key: str = ""   # free key at saucenao.com/user.php?page=login
+
 
 settings = Settings()
 

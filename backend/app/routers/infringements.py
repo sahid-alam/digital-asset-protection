@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 
 from app.models import InfringementRecord, InfringementStatusUpdate
@@ -37,10 +37,17 @@ def _to_record(row: dict) -> InfringementRecord:
 def list_infringements(
     asset_id: Optional[str] = None,
     status: Optional[str] = None,
+    platform: Optional[str] = Query(None),
+    min_confidence: Optional[float] = Query(None),
     limit: int = 50,
 ) -> list[InfringementRecord]:
     """List infringement records with optional filters."""
-    return [_to_record(r) for r in list_infringement_records(asset_id, status, limit)]
+    if asset_id:
+        asset_id = asset_id.strip()
+    return [
+        _to_record(r)
+        for r in list_infringement_records(asset_id, status, limit, platform, min_confidence)
+    ]
 
 
 @router.get("/{infringement_id}", response_model=InfringementRecord)

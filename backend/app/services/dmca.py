@@ -86,6 +86,7 @@ def _text_to_pdf(text: str) -> bytes:
     pdf.set_font("Helvetica", size=11)
     width = pdf.w - pdf.l_margin - pdf.r_margin
     for line in text.split("\n"):
+        pdf.set_x(pdf.l_margin)
         pdf.multi_cell(width, 6, line if line.strip() else " ")
     buf = io.BytesIO()
     pdf.output(buf)

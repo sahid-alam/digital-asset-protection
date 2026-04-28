@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Form, HTTPException, UploadFile, status
 
 from app.models import AssetUploadResponse
 from app.services import fingerprint as fp_svc
@@ -26,6 +26,8 @@ async def upload(
 ) -> AssetUploadResponse:
     """Upload and fingerprint a digital asset."""
     file_bytes = await file.read()
+    if len(file_bytes) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File too large. Maximum size is 10MB.")
     filename = file.filename or "file"
     asset_type = "image" if (file.content_type or "").startswith("image/") else "document"
 

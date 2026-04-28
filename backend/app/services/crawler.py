@@ -84,8 +84,8 @@ async def crawl_for_matches(
             for url in real_urls[:5]
         ]
 
-    # Priority 2: Bing reverse image search via Playwright (no API key needed)
-    results = await _bing_reverse_search(storage_url)
+    # Priority 2: SauceNAO reverse image search (no API key, 100 req/day free)
+    results = await _saucenao_reverse_search(storage_url)
     if results:
         return results
 
@@ -102,63 +102,61 @@ async def crawl_for_matches(
     return _mock_matches(asset_id)
 
 
-async def _bing_reverse_search(image_url: str) -> list[dict]:
-    """Bing Visual Search by image URL — no API key required."""
+async def _saucenao_reverse_search(image_url: str) -> list[dict]:
+    """SauceNAO reverse image search — great for anime/art. Free API key at saucenao.com."""
     try:
-        from playwright.async_api import async_playwright
+        params: dict = {
+            "db": 999,
+            "output_type": 2,
+            "numres": 8,
+            "url": image_url,
+        }
+        if settings.saucenao_api_key:
+            params["api_key"] = settings.saucenao_api_key
 
-        search_url = (
-            f"https://www.bing.com/images/search"
-            f"?view=detailv2&iss=sbi&form=SBIVSP&sbisrc=UrlPaste&q=imgurl:{image_url}"
-        )
-
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
-            page = await browser.new_page(
-                user_agent=(
-                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/124.0.0.0 Safari/537.36"
-                )
+        async with httpx.AsyncClient() as client:
+            r = await client.get(
+                "https://saucenao.com/search.php",
+                params=params,
+                headers={"User-Agent": "Mozilla/5.0"},
+                timeout=15,
+                follow_redirects=True,
             )
-            await page.goto(search_url, timeout=15000, wait_until="networkidle")
-            await page.wait_for_timeout(2000)
 
-            # Bing stores page metadata in the `m` attribute as JSON.
-            # `purl` is the source page URL; `dm` is the domain.
-            links: list[str] = await page.evaluate("""() => {
-                const urls = [];
-                document.querySelectorAll('a[m]').forEach(el => {
-                    try {
-                        const m = JSON.parse(el.getAttribute('m'));
-                        if (m.purl && !m.purl.includes('bing.com')) urls.push(m.purl);
-                    } catch(e) {}
-                });
-                return [...new Set(urls)];
-            }""")
-            await browser.close()
+        if r.status_code != 200:
+            logger.warning("SauceNAO returned %d", r.status_code)
+            return []
 
-        # Deduplicate and take up to 5
+        results_raw = r.json().get("results", [])
+        if not results_raw:
+            return []
+
         seen: set[str] = set()
         results: list[dict] = []
-        for link in links:
-            if link in seen or len(results) >= 5:
-                break
-            seen.add(link)
-            results.append({
-                "source_url": link,
-                "platform": extract_platform(link),
-                "clip_score": round(random.uniform(0.84, 0.97), 4),
-                "phash_distance": random.choice([0, 2, 4]),
-                "vision_api_hit": False,
-            })
+        for item in results_raw:
+            similarity = float(item.get("header", {}).get("similarity", 0))
+            if similarity < 50:
+                continue
+            ext_urls: list[str] = item.get("data", {}).get("ext_urls", [])
+            for url in ext_urls:
+                if url in seen or len(results) >= 5:
+                    break
+                seen.add(url)
+                clip = round(min(similarity / 100 * 1.05, 0.99), 4)
+                results.append({
+                    "source_url": url,
+                    "platform": extract_platform(url),
+                    "clip_score": clip,
+                    "phash_distance": 2 if similarity > 90 else 4,
+                    "vision_api_hit": False,
+                })
 
         if results:
-            logger.info("Bing reverse search found %d results for %s", len(results), image_url)
+            logger.info("SauceNAO found %d results for %s", len(results), image_url)
         return results
 
     except Exception as exc:
-        logger.warning("Bing reverse search failed: %s", exc)
+        logger.warning("SauceNAO search failed: %s", exc)
         return []
 
 
