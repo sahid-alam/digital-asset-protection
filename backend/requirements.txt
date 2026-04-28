@@ -4,8 +4,6 @@ python-multipart
 supabase
 pgvector
 # torch and torchvision installed before this step in Dockerfile (CPU-only build)
-# numpy must stay < 2.0 to match the ABI that torch 2.2.2+cpu was compiled against
-numpy<2.0
 open-clip-torch
 imagehash
 Pillow
