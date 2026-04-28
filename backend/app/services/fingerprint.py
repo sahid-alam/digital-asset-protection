@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import io
 from typing import Optional
 
@@ -33,18 +34,28 @@ def load_models() -> None:
     print("CLIP model loaded.", flush=True)
 
 
-async def generate_image_fingerprint(file_bytes: bytes, asset_id: str) -> FingerprintResult:
-    """CLIP embedding + pHash + Vision API labels for an image asset."""
+def _compute_clip_and_phash(file_bytes: bytes) -> tuple[list[float], str]:
+    """Run CLIP inference and pHash in a thread (CPU-bound)."""
     img = Image.open(io.BytesIO(file_bytes)).convert("RGB")
-
     tensor = _preprocess(img).unsqueeze(0)  # type: ignore[operator]
     with torch.no_grad():
         features = _model.encode_image(tensor)  # type: ignore[union-attr]
         features = features / features.norm(dim=-1, keepdim=True)
     clip_embedding: list[float] = features[0].tolist()
-
     phash = str(imagehash.phash(img))
-    vision_result = _call_vision_api(file_bytes)
+    return clip_embedding, phash
+
+
+async def generate_image_fingerprint(file_bytes: bytes, asset_id: str) -> FingerprintResult:
+    """CLIP embedding + pHash + Vision API labels for an image asset."""
+    clip_embedding, phash = await asyncio.to_thread(_compute_clip_and_phash, file_bytes)
+    try:
+        vision_result = await asyncio.wait_for(
+            asyncio.to_thread(_call_vision_api, file_bytes),
+            timeout=10.0,
+        )
+    except asyncio.TimeoutError:
+        vision_result = {"labels": [], "web_urls": []}
     labels = vision_result["labels"]
     web_urls = vision_result["web_urls"]
     # Store labels + web page URLs together; URLs prefixed "url::" for crawler to consume
