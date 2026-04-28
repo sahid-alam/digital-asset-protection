@@ -8,13 +8,11 @@ torchvision
 open-clip-torch
 imagehash
 Pillow
-sentence-transformers
 resend
 jinja2
 fpdf2
 python-dotenv
 httpx
-playwright
 google-genai
 google-cloud-vision
 google-cloud-aiplatform
