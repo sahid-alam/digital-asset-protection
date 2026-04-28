@@ -1,9 +1,9 @@
 FROM python:3.11-slim
 WORKDIR /app
 
-# Install CPU-only torch first to avoid pulling in 2GB of CUDA libraries
+# Install CPU-only torch (2.3+ is required for numpy 2.x compatibility)
 RUN pip install --no-cache-dir \
-    torch==2.2.2+cpu torchvision==0.17.2+cpu \
+    torch==2.3.0+cpu torchvision==0.18.0+cpu \
     --index-url https://download.pytorch.org/whl/cpu
 
 COPY requirements.txt .

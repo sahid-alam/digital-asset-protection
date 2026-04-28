@@ -36,14 +36,16 @@ def load_models() -> None:
 async def generate_image_fingerprint(file_bytes: bytes, asset_id: str) -> FingerprintResult:
     """CLIP embedding + pHash + Vision API labels for an image asset."""
     img = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+    # Cap at 1024px longest side — CLIP downsamples to 224x224 anyway, no quality loss.
+    img.thumbnail((1024, 1024), Image.LANCZOS)
 
     tensor = _preprocess(img).unsqueeze(0)  # type: ignore[operator]
     with torch.no_grad():
         features = _model.encode_image(tensor)  # type: ignore[union-attr]
         features = features / features.norm(dim=-1, keepdim=True)
     clip_embedding: list[float] = features[0].tolist()
+    phash = str(imagehash.dhash(img))
 
-    phash = str(imagehash.phash(img))
     vision_result = _call_vision_api(file_bytes)
     labels = vision_result["labels"]
     web_urls = vision_result["web_urls"]

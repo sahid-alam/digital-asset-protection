@@ -3,8 +3,7 @@ uvicorn[standard]
 python-multipart
 supabase
 pgvector
-torch
-torchvision
+# torch and torchvision installed before this step in Dockerfile (CPU-only build)
 open-clip-torch
 imagehash
 Pillow
