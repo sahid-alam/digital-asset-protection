@@ -5,9 +5,7 @@ export async function uploadAsset(file: File, ownerEmail?: string): Promise<Asse
   const form = new FormData()
   form.append('file', file)
   if (ownerEmail) form.append('owner_email', ownerEmail)
-  const res = await api.post<Asset>('/assets/upload', form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  const res = await api.post<Asset>('/assets/upload', form)
   return res.data
 }
 
