@@ -12,7 +12,7 @@ export async function uploadAsset(file: File, ownerEmail?: string): Promise<Asse
 }
 
 export async function listAssets(): Promise<Asset[]> {
-  const res = await api.get<Asset[]>('/assets')
+  const res = await api.get<Asset[]>('/assets/')
   return res.data
 }
 
