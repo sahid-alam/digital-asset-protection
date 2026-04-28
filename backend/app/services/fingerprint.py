@@ -37,6 +37,9 @@ def load_models() -> None:
 def _compute_clip_and_phash(file_bytes: bytes) -> tuple[list[float], str]:
     """Run CLIP inference and pHash in a thread (CPU-bound)."""
     img = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+    # Cap at 1024px longest side to stay within Railway's 512MB RAM limit.
+    # CLIP downsamples to 224x224 anyway so quality is unaffected.
+    img.thumbnail((1024, 1024), Image.LANCZOS)
     tensor = _preprocess(img).unsqueeze(0)  # type: ignore[operator]
     with torch.no_grad():
         features = _model.encode_image(tensor)  # type: ignore[union-attr]
